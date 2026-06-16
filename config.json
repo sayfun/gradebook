@@ -1,0 +1,49 @@
+{
+  "course": "JM204 Media and Social Diversity",
+  "semester": "2025-2",
+  "professors": ["Dr. Smith", "Dr. Jones"],
+  "grade_scale": {
+    "A":  90,
+    "B+": 85,
+    "B":  80,
+    "C+": 75,
+    "C":  70,
+    "D+": 65,
+    "D":  60
+  },
+  "pass_threshold": 50,
+  "categories": [
+    {
+      "name": "Assignments",
+      "weight": 30,
+      "raw_max": 32,
+      "assignments": [
+        "Attendance & Quiz",
+        "Attendance & Quiz 2/5",
+        "Attendance week 4",
+        "Homework #1 - Questioning Media Reality",
+        "Can't Handle This Homework! :o ",
+        "Mora Panic Assignment - Individual Submission - group work",
+        "JM204 SONGKRAN SPECIAL: The Mediascape Simulation",
+        "Exhibition Check-In Assignment"
+      ]
+    },
+    {
+      "name": "Midterm",
+      "weight": 25,
+      "raw_max": 25,
+      "assignments": ["Midterm - Individual Media Analysis"]
+    },
+    {
+      "name": "Final Project",
+      "weight": 35,
+      "raw_max": 35,
+      "assignments": ["FINAL PROJECT - Individual Submission"]
+    },
+    {
+      "name": "Participation",
+      "weight": 10,
+      "manual": true
+    }
+  ]
+}
