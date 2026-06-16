@@ -5,7 +5,11 @@ from io import BytesIO
 
 import streamlit as st
 
-from core import load_config, process
+try:
+    from core import load_config, process
+except Exception as _import_err:
+    st.error(f"Failed to import core module: {_import_err}")
+    st.stop()
 
 st.set_page_config(
     page_title="Gradebook Builder",
