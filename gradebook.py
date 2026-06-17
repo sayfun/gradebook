@@ -147,12 +147,6 @@ if generate:
         "pass_threshold": pass_threshold,
         "categories": categories,
     }
-    try:
-        pass  # config is already a dict, nothing to parse
-    except Exception as exc:
-        st.error(f"Config error: {exc}")
-        st.stop()
-
     with st.spinner("Parsing exports and building gradebook …"):
         try:
             xlsx_bytes, unmatched = process(uploaded_files, config)
@@ -174,7 +168,7 @@ if generate:
     st.download_button(
         label="⬇️  Download Gradebook",
         data=xlsx_bytes,
-        file_name=output_filename,
+        file_name="gradebook.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
