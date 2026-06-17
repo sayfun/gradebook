@@ -257,18 +257,29 @@ def _category_formula(
     raw_max: float,
     weight: float,
 ) -> str:
-    """=SUM(C4:E4)/raw_max*weight  — all cell refs, no hardcoded sums."""
-    if len(assignment_cols) == 1:
-        cell_range = f"{assignment_cols[0]}{student_row}"
-    else:
-        cell_range = f"{assignment_cols[0]}{student_row}:{assignment_cols[-1]}{student_row}"
-    return f"=IFERROR(SUM({cell_range})/{raw_max}*{weight},\"\")"
+    """
+    Weighted score capped at the category weight so raw totals exceeding
+    raw_max (extra credit, misconfigured max) can never push the total past 100.
+
+    =MIN(SUM(cols)/raw_max*weight, weight)
+    """
+    # Use explicit comma-separated refs instead of a range so non-contiguous
+    # columns (if any slipped through) are never accidentally included.
+    cells = ",".join(f"{c}{student_row}" for c in assignment_cols)
+    return (
+        f'=IFERROR(MIN(SUM({cells})/{raw_max}*{weight},{weight}),"")'
+    )
 
 
 def _total_formula(student_row: int, cat_score_cols: list[str], participation_col: str) -> str:
-    """Sum all category weighted score columns including participation."""
-    parts = [f"{c}{student_row}" for c in cat_score_cols + [participation_col]]
-    return "=IFERROR(" + "+".join(parts) + ',"")'
+    """
+    Sum all category weighted score columns including participation.
+    Uses SUM (not +) so cells returning "" from IFERROR are treated as 0
+    rather than causing a #VALUE! error.
+    """
+    all_cols = cat_score_cols + ([participation_col] if participation_col else [])
+    cells = ",".join(f"{c}{student_row}" for c in all_cols)
+    return f"=IFERROR(SUM({cells}),\"\")"
 
 
 def _avg_formula(col: str, first_data_row: int, last_data_row: int) -> str:
