@@ -1,7 +1,6 @@
 """Streamlit web interface for the gradebook tool."""
 
 import json
-from io import BytesIO
 
 import streamlit as st
 
@@ -69,96 +68,89 @@ with left:
                 st.markdown(f"• `{f.name}`")
 
 with right:
-    st.subheader("2 · Config")
-    config_tab, editor_tab = st.tabs(["Upload config.json", "Paste / edit JSON"])
+    st.subheader("2 · Course settings")
 
-    with config_tab:
-        config_file = st.file_uploader(
-            "config.json or config.yaml",
-            type=["json", "yaml", "yml"],
-            key="config_upload",
+    course_name = st.text_input("Course name", value="JM204 Media and Social Diversity")
+    col_sem, col_prof = st.columns(2)
+    with col_sem:
+        semester = st.text_input("Semester", value="2025-2")
+    with col_prof:
+        professors_raw = st.text_input(
+            "Instructor(s)", value="Dr. Smith",
+            help="Separate multiple names with a comma",
         )
 
-    with editor_tab:
-        default_config = json.dumps(
-            {
-                "course": "JM204 Media and Social Diversity",
-                "semester": "2025-2",
-                "professors": ["Dr. Smith"],
-                "grade_scale": {
-                    "A": 90, "B+": 85, "B": 80,
-                    "C+": 75, "C": 70, "D+": 65, "D": 60,
-                },
-                "pass_threshold": 50,
-                "categories": [
-                    {
-                        "name": "Assignments",
-                        "weight": 30,
-                        "raw_max": 32,
-                        "assignments": [
-                            "Attendance & Quiz",
-                            "Homework #1 - Questioning Media Reality",
-                        ],
-                    },
-                    {
-                        "name": "Midterm",
-                        "weight": 25,
-                        "raw_max": 25,
-                        "assignments": ["Midterm - Individual Media Analysis"],
-                    },
-                    {
-                        "name": "Final Project",
-                        "weight": 35,
-                        "raw_max": 35,
-                        "assignments": ["FINAL PROJECT - Individual Submission"],
-                    },
-                    {"name": "Participation", "weight": 10, "manual": True},
-                ],
-            },
-            indent=2,
-        )
-        config_text = st.text_area(
-            "Edit config JSON",
-            value=default_config,
-            height=340,
-            key="config_text",
-        )
+    st.markdown("**Grade categories** — one per row: Name | Weight% | Max raw points | Assignment names (comma-separated)")
+    st.caption("Leave 'Max raw points' blank and tick 'Manual entry' for Participation.")
+
+    # Default category rows
+    default_categories = [
+        ("Assignments", 30, 32, "Attendance & Quiz, Homework #1 - Questioning Media Reality", False),
+        ("Midterm", 25, 25, "Midterm - Individual Media Analysis", False),
+        ("Final Project", 35, 35, "FINAL PROJECT - Individual Submission", False),
+        ("Participation", 10, 0, "", True),
+    ]
+
+    categories = []
+    for i, (dname, dweight, draw_max, dasgns, dmanual) in enumerate(default_categories):
+        with st.expander(f"Category {i+1}: {dname}", expanded=True):
+            c1, c2, c3 = st.columns([2, 1, 1])
+            with c1:
+                cat_name = st.text_input("Name", value=dname, key=f"cat_name_{i}")
+            with c2:
+                cat_weight = st.number_input("Weight %", value=dweight, min_value=0, max_value=100, key=f"cat_weight_{i}")
+            with c3:
+                cat_manual = st.checkbox("Manual entry", value=dmanual, key=f"cat_manual_{i}",
+                                         help="Tick for Participation — leaves the column blank for you to fill in")
+            if not cat_manual:
+                cat_raw_max = st.number_input("Max raw points total", value=draw_max, min_value=1, key=f"cat_raw_{i}")
+                cat_asgns_raw = st.text_area(
+                    "Assignment names (one per line, fuzzy matched)",
+                    value="\n".join(a.strip() for a in dasgns.split(",") if a.strip()),
+                    height=80,
+                    key=f"cat_asgns_{i}",
+                    help="Paste the assignment names exactly as they appear in your MS Teams exports. Partial matches are fine.",
+                )
+                asgn_list = [a.strip() for a in cat_asgns_raw.splitlines() if a.strip()]
+                categories.append({"name": cat_name, "weight": cat_weight,
+                                    "raw_max": cat_raw_max, "assignments": asgn_list})
+            else:
+                categories.append({"name": cat_name, "weight": cat_weight, "manual": True})
+
+    with st.expander("Grade scale"):
+        gc1, gc2, gc3, gc4 = st.columns(4)
+        grade_A   = gc1.number_input("A ≥",  value=90, key="gA")
+        grade_Bp  = gc1.number_input("B+ ≥", value=85, key="gBp")
+        grade_B   = gc2.number_input("B ≥",  value=80, key="gB")
+        grade_Cp  = gc2.number_input("C+ ≥", value=75, key="gCp")
+        grade_C   = gc3.number_input("C ≥",  value=70, key="gC")
+        grade_Dp  = gc3.number_input("D+ ≥", value=65, key="gDp")
+        grade_D   = gc4.number_input("D ≥",  value=60, key="gD")
+        pass_threshold = gc4.number_input("Pass threshold ≥", value=50, key="gPass",
+                                          help="Students below this total are marked Fail")
 
 st.divider()
-
-# ── Options ───────────────────────────────────────────────────────────────────
-with st.expander("Advanced options"):
-    fuzzy_threshold = st.slider(
-        "Fuzzy-match threshold",
-        min_value=30,
-        max_value=100,
-        value=60,
-        step=5,
-        help=(
-            "Minimum similarity score (0–100) to match an export's assignment name to a "
-            "config category. Lower = more lenient. Unmatched assignments go to 'Unassigned'."
-        ),
-    )
-    output_filename = st.text_input(
-        "Output filename",
-        value="gradebook.xlsx",
-        help="Name for the downloaded .xlsx file.",
-    )
 
 # ── Generate ──────────────────────────────────────────────────────────────────
 st.subheader("3 · Generate")
 generate = st.button("⚙️  Build Gradebook", type="primary", disabled=not uploaded_files)
 
 if generate:
-    # Resolve config
-    config: dict | None = None
+    config: dict = {
+        "course": course_name,
+        "semester": semester,
+        "professors": [p.strip() for p in professors_raw.split(",") if p.strip()],
+        "grade_scale": {
+            "A": grade_A, "B+": grade_Bp, "B": grade_B,
+            "C+": grade_Cp, "C": grade_C, "D+": grade_Dp, "D": grade_D,
+        },
+        "pass_threshold": pass_threshold,
+        "categories": categories,
+    }
     try:
-        if config_file is not None:
-            config = load_config(config_file)
-        else:
-            config = json.loads(config_text)
+        pass  # config is already a dict, nothing to parse
     except Exception as exc:
-        st.error(f"Config parse error: {exc}")
+        st.error(f"Config error: {exc}")
         st.stop()
 
     with st.spinner("Parsing exports and building gradebook …"):
@@ -194,20 +186,6 @@ with st.expander("How to use"):
 - Row 1 (index 0): may be a meta row (ignored)
 - Row 2 (index 1): column headers — must include **Full Name**, **Assignments**, **Points**
 - Row 3+: student data
-
-**Config fields:**
-| Field | Description |
-|---|---|
-| `course` | Course name shown in the gradebook banner |
-| `semester` | Semester label |
-| `professors` | List of instructor names (supports multiple) |
-| `grade_scale` | Letter → minimum score mapping |
-| `pass_threshold` | Minimum total score to pass |
-| `categories[].name` | Category name |
-| `categories[].weight` | Percentage weight (should sum to 100) |
-| `categories[].raw_max` | Raw points total for this category (for scaling) |
-| `categories[].assignments` | Assignment names to include (fuzzy matched) |
-| `categories[].manual` | `true` for Participation — leaves column blank |
 
 **Output sheet 1 "Master Gradebook":**
 - Row 1: Course banner
